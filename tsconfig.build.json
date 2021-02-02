@@ -9,7 +9,8 @@
     "esModuleInterop": true,
     "importsNotUsedAsValues": "remove",
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "stripInternal": true
   },
   "exclude": [
     "./tests/**",

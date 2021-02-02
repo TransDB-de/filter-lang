@@ -43,8 +43,8 @@ function getNextToken(unlexed: string, position: number): [Token, string, number
 	// may be a quoted segment
 	if ( /^"/.test(trimmed) ) {
 
-		// determine length of segment by finding unescaped closing quote, or end of string
-		segmentLength = trimmed.search(/(?:[^\\]")/) + 2;
+		// determine length of segment by finding closing quote, or end of string
+		segmentLength = trimmed.search(/.(?:")/) + 2;
 
 		// if closing quote found
 		if (segmentLength > 1) {
@@ -58,8 +58,8 @@ function getNextToken(unlexed: string, position: number): [Token, string, number
 	// not a quoted segemnt
 	if (type === TokenType.String) {
 
-		// determine length of segment by finding either whitespace, or unescaped ':'
-		segmentLength = trimmed.search(/\S\s|(?:[^\\]:)|.,(?=\s)/) + 2;
+		// determine length of segment by finding either whitespace, or ':'
+		segmentLength = trimmed.search(/\s|(?:\:)|,(?=\s)/) + 1;
 
 		val = trimmed.slice(0, segmentLength) // include trailing char, so we can check for filters
 
@@ -91,7 +91,7 @@ function getNextToken(unlexed: string, position: number): [Token, string, number
 
 	token = {
 		type,
-		val: val.trim().replace(/\\(?="|:)/g, ''), // remove whitespace and escape chars
+		val: val.trim(), // remove whitespace
 		length: val.endsWith(":") || type === TokenType.QuotedString ? segmentLength : segmentLength - 1,
 		position,
 		commaSeperated

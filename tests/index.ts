@@ -9,7 +9,7 @@ const generalFields = {
 	"Hausnummer": "address.house",
 
 	"Name": "name",
-	"Vorname:": "firstName",
+	"Vorname": "firstName",
 	"Nachname": "lastName",
 	"email": "email",
 	"website": "website",
@@ -26,7 +26,8 @@ const langDef: FilterLang.LanguageDefinition = [
 		type: "text",
 		field: "type",
 		mappings: {
-			"Gruppe": "group"
+			"gruppe": "group",
+			"therapeut": "therapist"
 		}
 	},
 
@@ -40,13 +41,22 @@ const langDef: FilterLang.LanguageDefinition = [
 	},
 
 	{
-		name: "hat",
+		name: "bietet",
 		negationSuffix: "nicht",
 		type: "array-contains",
 		fields: [ "meta.attributes", "meta.offers" ],
 		mappings: {
-			"Freizeitangebote": "activities",
-			"Transfocus": "trans"
+			"guteLaune": "good_mood"
+		}
+	},
+
+	{
+		name: "macht",
+		negationSuffix: "nicht",
+		type: "array-contains",
+		fields: [ "meta.attributes", "meta.offers" ],
+		mappings: {
+			"glücklich": "happy"
 		}
 	},
 
@@ -94,7 +104,7 @@ const langDef: FilterLang.LanguageDefinition = [
 	{
 		name: "mindestalter",
 		type: "number",
-		negationSuffix: "nicht",
+		negationSuffix: "ist-nicht",
 		field: "meta.minAge",
 		suffixes: [ "ist", "unter", "über" ]
 	},
@@ -128,6 +138,8 @@ command = '"viele viele viele worte"'
 
 command = "uwu ist:freigeschaltet hat-nicht:freizeitangebote, transfocus";
 
+command = 'bietet: gibtsnix, ist: "f'
+
 console.log(FilterLang.Lexer.tokenize(command));
 
 console.time("startLang")
@@ -144,7 +156,7 @@ console.time("compiling");
 let aggregation = FilterLang.Compiler.compileToMongoDB(parsed)
 console.timeEnd("compiling");
 
-//let log = JSON.stringify(myLang.liveParse(command), undefined, 2);
-let log = JSON.stringify(aggregation, undefined, 2);
+let log = JSON.stringify(myLang.liveParse(command), undefined, 2);
+//let log = JSON.stringify(aggregation, undefined, 2);
 
 fs.writeFileSync("log.json", log);

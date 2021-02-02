@@ -1,14 +1,8 @@
 import type { LanguageFilterDictionary } from "../types/internal";
 import type { AbstractFilters } from "../types/abstractFormat";
 import { Token } from "./lexer.js";
-export interface Details {
-    contexts: {
-        range: [number, number];
-        name: string;
-        open: boolean;
-    }[];
-    autocomplete: string[];
-}
+import * as Live from "./liveParse.js";
+export type { Details } from "./liveParse";
 /**
  * Parse an input string into an abstract form
  * @param input string to parse
@@ -21,4 +15,4 @@ export declare function parse(input: string, filters: LanguageFilterDictionary):
  * @param filters
  * @param live live parsing additionally returns details
  */
-export declare function parseTokenized(tokens: Token[], filters: LanguageFilterDictionary, live?: boolean): [AbstractFilters, Details];
+export declare function parseTokenized(tokens: Token[], filters: LanguageFilterDictionary, live?: boolean): [AbstractFilters, Live.Details];
