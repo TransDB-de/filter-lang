@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ESNEXT",
-    "module": "ESNEXT",
+    "target": "ES2018",
+    "module": "CommonJS",
     "declaration": true,
     "outDir": "./lib",
     "rootDir": "./source",
