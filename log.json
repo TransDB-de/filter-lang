@@ -1,0 +1,48 @@
+[
+  {
+    "$match": {
+      "$text": {
+        "$search": "uwu"
+      }
+    }
+  },
+  {
+    "$match": {
+      "$and": [
+        {
+          "approved": {
+            "$ne": null
+          }
+        },
+        {
+          "$nor": [
+            {
+              "meta.attributes": {
+                "$in": [
+                  "activities",
+                  "trans"
+                ]
+              }
+            },
+            {
+              "meta.offers": {
+                "$in": [
+                  "activities",
+                  "trans"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "$sort": {
+      "score": {
+        "$meta": "textScore"
+      },
+      "_id": -1
+    }
+  }
+]

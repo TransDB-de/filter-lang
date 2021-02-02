@@ -1,0 +1,17 @@
+{
+  "name": "filter-lang",
+  "version": "0.0.1",
+  "description": "Domain specific front-end filter language",
+  "main": "./lib/main.js",
+  "scripts": {
+    "test": "node ./js/tests",
+    "build": "tsc --project tsconfig.build.json"
+  },
+  "author": "Laila Los",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^14.14.22"
+  },
+  "files": ["lib/**/*"]
+}

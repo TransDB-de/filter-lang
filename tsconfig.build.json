@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNEXT",
+    "module": "ESNEXT",
+    "declaration": true,
+    "outDir": "./lib",
+    "rootDir": "./source",
+    "strict": true,
+    "esModuleInterop": true,
+    "importsNotUsedAsValues": "remove",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "exclude": [
+    "./tests/**",
+    "./lib/**"
+  ]
+}
