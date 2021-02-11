@@ -18,7 +18,7 @@ interface GeoJsonPoint {
  * making the pipeline more preformant on average.
  */
 export interface InjectedStages {
-    [fieldName: string]: iDictionary;
+    [fieldName: string]: iDictionary[];
 }
 /**
  * Compiles a filter to a mongoDB aggregation pipeline, which can be further modified, or used directly, to get the filtered documents.
