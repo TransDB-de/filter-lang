@@ -15,6 +15,20 @@ It also simplifies the back-end, by providing a compiled query, instad of having
 Additionally, FilteLang provides a simple form of language server, with the `liveParse` function.
 It returns autocompletion suggestions, and context hightlighting, making it easy to build an intuitive input field.
 
+## Installing
+
+Add the following to your .npmrc file in your root directory:
+
+`@transdb-de:registry=https://npm.pkg.github.com`
+
+Then, install the pacakge with:
+
+`npm install filter-lang@transdb-de/filter-lang`
+
+You can now use it in your code with:
+
+`import * as filter-lang from "filter-lang"`
+
 ## Getting Started
 
 First, you will need to define your language. For the specification of a language definition, refer to the interface `LanguageDefinition`.
