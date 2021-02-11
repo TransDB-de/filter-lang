@@ -46,7 +46,7 @@ const langDef: FilterLang.LanguageDefinition = [
 		type: "array-contains",
 		fields: [ "meta.attributes", "meta.offers" ],
 		mappings: {
-			"guteLaune": "good_mood"
+			"guteLaune": "goodMood"
 		}
 	},
 
@@ -138,7 +138,11 @@ command = '"viele viele viele worte"'
 
 command = "uwu ist:freigeschaltet hat-nicht:freizeitangebote, transfocus";
 
-command = 'bietet: gibtsnix, ist: "f'
+command = 'hat:"Mindestalter",'
+
+command = "straße: astr, bstr, cstr"
+
+command = "vorname: Bob bietet: guteLaune"
 
 console.log(FilterLang.Lexer.tokenize(command));
 
@@ -150,13 +154,13 @@ console.time("parsing");
 let parsed = myLang.parse(command);
 console.timeEnd("parsing");
 
-console.log(parsed);
+console.log(JSON.stringify(parsed, undefined, "  "));
 
 console.time("compiling");
 let aggregation = FilterLang.Compiler.compileToMongoDB(parsed)
 console.timeEnd("compiling");
 
-let log = JSON.stringify(myLang.liveParse(command), undefined, 2);
-//let log = JSON.stringify(aggregation, undefined, 2);
+//let log = JSON.stringify(myLang.liveParse(command), undefined, 2);
+let log = JSON.stringify(aggregation, undefined, 2);
 
 fs.writeFileSync("log.json", log);
