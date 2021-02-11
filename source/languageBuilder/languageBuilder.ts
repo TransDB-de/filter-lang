@@ -6,11 +6,14 @@ export type { FilterDefinition, LanguageDefinition, StringDictionary }
 import { deepCopy, lowerCaseKeys } from "../util.js"
 
 
+/** generic object with string key */
 type O = { [key: string]: any };
 
 /**
- * Scans the provided language definition, and changes it into a format more suitable for parsing
- * @param definition 
+ * Scans the provided language definition, and changes it into a format more suitable for parsing.
+ * This is done to simplify and speed up parsing.
+ * You only need to do this once
+ * @param definition Language defintion to convert
  */
 export function makeLangFilterDictionary(definition: LanguageDefinition): LanguageFilterDictionary {
 	let filterDictionary: LanguageFilterDictionary = {}
@@ -20,7 +23,7 @@ export function makeLangFilterDictionary(definition: LanguageDefinition): Langua
 		// get new definitions from filter
 		let newDict = makeLangFilter(filter);
 
-		// merge new definitions
+		// merge new definitions, into single dictionary
 		filterDictionary = mergeNewFilters(filterDictionary, newDict);
 
 	}
@@ -29,8 +32,8 @@ export function makeLangFilterDictionary(definition: LanguageDefinition): Langua
 }
 
 /**
- * Constructs a new LangaugeFilterDictionary for a singe FilterDefinition
- * @param filterDef 
+ * Constructs a new LangaugeFilterDictionary for a single FilterDefinition.
+ * @param filterDefFilter defintion to convert
  */
 function makeLangFilter(filterDef: FilterDefinition): LanguageFilterDictionary {
 

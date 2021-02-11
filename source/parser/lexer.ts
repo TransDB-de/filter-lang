@@ -86,7 +86,7 @@ function getNextToken(unlexed: string, position: number): [Token, string, number
 	// detect spaced comma seperation
 	if (rest.startsWith(",")) {
 		commaSeperated = true;
-		rest = rest.slice(0, 1).trimStart();
+		rest = rest.slice(1).trimStart();
 	}
 
 	token = {

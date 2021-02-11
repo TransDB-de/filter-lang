@@ -73,10 +73,9 @@ export function parseTokenized(tokens: Token[], filters: LanguageFilterDictionar
 	// live parse details
 	let liveCtx: Live.LiveContext = {
 		lastContext: false,
-		details: { contexts: [], autocomplete: [] },
+		details: { contexts: [], autocomplete: [], openQuote: false },
 		contextStart: 0,
 		contextName: "",
-		openQuote: false,
 		openVal: ""
 	}
 
@@ -234,17 +233,31 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 		} else
 		if (type.startsWith("text")) {
 
-			let comparisionKey: "equalTo" | "notEqualTo" = "equalTo";
+			let comparisonKey: "equalTo" | "notEqualTo" = "equalTo";
 
 			if (type.endsWith("not")) {
-				comparisionKey = "notEqualTo";
+				comparisonKey = "notEqualTo";
 			}
 
 			content.fields.forEach((field: string) => {
 
 				if (!aFilter.compare[field]) aFilter.compare[field] = {};
 
-				aFilter.compare[field][comparisionKey] = val as string;
+				let cField = aFilter.compare[field][comparisonKey] as string | string[] | undefined;
+
+				if (cField === undefined) {
+					cField = val as string;
+				} else {
+
+					if (!Array.isArray(cField)) {
+						cField = [ cField ];
+					}
+
+					cField.push(val as string);
+
+				}
+
+				aFilter.compare[field][comparisonKey] = cField;
 
 			});
 
@@ -257,6 +270,18 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 
 			let numberVal = parseFloat(val);
 
+			let comparisonKey: keyof AbstractFilters['compare'][string] = "equalTo";
+
+			if (type.endsWith("not")) {
+				comparisonKey = "notEqualTo";
+			} else
+			if (type.endsWith("smaller")) {
+				comparisonKey = "smallerThan";
+			} else
+			if (type.endsWith("larger")) {
+				comparisonKey = "largerThan";
+			}
+
 			content.fields.forEach((field: string) => {
 
 				// create field if none exists
@@ -264,16 +289,19 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 					aFilter.compare[field] = {};
 				}
 
-				if (type.endsWith("not")) {
-					aFilter.compare[field]["notEqualTo"] = numberVal;
-				} else
-				if (type.endsWith("smaller")) {
-					aFilter.compare[field]["smallerThan"] = numberVal;
-				} else
-				if (type.endsWith("larger")) {
-					aFilter.compare[field]["largerThan"] = numberVal;
+				let cField = aFilter.compare[field][comparisonKey] as number | number[] | undefined;
+
+				if ((comparisonKey === "equalTo" || comparisonKey === "notEqualTo") && cField !== undefined) {
+
+					if (!Array.isArray(cField)) {
+						cField = [ cField ]
+					}
+
+					cField.push(numberVal);
+					
+					aFilter.compare[field][comparisonKey] = cField;
 				} else {
-					aFilter.compare[field]["equalTo"] = numberVal;
+					aFilter.compare[field][comparisonKey] = numberVal;
 				}
 
 			});
@@ -423,4 +451,3 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 	return { ...ctx, aFilter, currentContext };
 
 }
-

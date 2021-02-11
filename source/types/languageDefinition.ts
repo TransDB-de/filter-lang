@@ -85,7 +85,9 @@ export interface FilterDefinition {
 	suffixes?: [string, string, string]
 
 	/**
-	 * Flat object with language to data mappings.
+	 * Flat object with language names to data names.
+	 * 
+	 * Can be used to convert keys, or values, depending on the type of filter.
 	 * 
 	 * @example
 	 * // Mapping

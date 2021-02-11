@@ -4,8 +4,8 @@
  * @see AbstractFilters
  */
 export interface Comparison {
-	equalTo?: string | number
-	notEqualTo?: string | number
+	equalTo?: string | number | string[] | number[]
+	notEqualTo?: string | number | string[] | number[]
 	largerThan?: number
 	smallerThan?: number
 }

@@ -19,6 +19,9 @@ export interface Details {
 
 	/** suggestions for what to input next, based on langauge definition */
 	autocomplete: string[]
+
+	/** wheter the suer left a quote open */
+	openQuote: boolean
 }
 
 /**
@@ -34,8 +37,6 @@ export interface LiveContext {
 	contextStart: number
 	/** name of the filter currently in context */
 	contextName: string
-	/** whether the input has an unclosed quote */
-	openQuote: boolean
 	/** if the input has an unclosed quote, collects all token values, for better autocompletion */
 	openVal: string
 }
@@ -43,26 +44,26 @@ export interface LiveContext {
 /** @internal */
 export function beforeParse(ctx: ParsingContext, liveCtx: LiveContext): LiveContext {
 
-	let { openQuote, openVal } = liveCtx;
+	let { details, openVal } = liveCtx;
 	const { token } = ctx;
 
 	if (token.val.includes('"')) {
-		openQuote = true;
+		details.openQuote = true;
 		openVal += token.val.slice(1);
-	} else if (openQuote) {
+	} else if (details.openQuote) {
 		openVal += " " + token.val;
 	}
 
-	return { ...liveCtx, openQuote, openVal };
+	return { ...liveCtx, details, openVal };
 }
 
 /** @internal */
 export function afterParse(ctx: ParsingContext, liveCtx: LiveContext): LiveContext {
 
-	let { lastContext, openQuote, contextName, contextStart, details } = liveCtx;
+	let { lastContext, contextName, contextStart, details } = liveCtx;
 	const { currentContext, token } = ctx;
 
-	if (openQuote) return liveCtx;
+	if (details.openQuote) return liveCtx;
 
 	// context switched
 	if (currentContext !== lastContext) {
@@ -86,7 +87,7 @@ export function afterParse(ctx: ParsingContext, liveCtx: LiveContext): LiveConte
 
 	lastContext = currentContext;
 
-	return { ...liveCtx, lastContext, openQuote, contextName, contextStart, details };
+	return { ...liveCtx, lastContext, contextName, contextStart, details };
 }
 
 /**
@@ -94,7 +95,7 @@ export function afterParse(ctx: ParsingContext, liveCtx: LiveContext): LiveConte
  * Close open contexts, and make auto-completion suggestions
  */
 export function finalLivePass(ctx: ParsingContext, liveCtx: LiveContext): Details {
-	let { details, lastContext, contextStart, contextName, openQuote, openVal } = liveCtx;
+	let { details, lastContext, contextStart, contextName, openVal } = liveCtx;
 	const { currentContext, token, filters } = ctx
 
 	// add trailing context
@@ -105,7 +106,7 @@ export function finalLivePass(ctx: ParsingContext, liveCtx: LiveContext): Detail
 			open: (token.open ? true : false)
 				|| token.commaSeperated
 				|| token.val.endsWith(":")
-				|| openQuote
+				|| details.openQuote
 		});
 	}
 
@@ -114,7 +115,7 @@ export function finalLivePass(ctx: ParsingContext, liveCtx: LiveContext): Detail
 	let l = details.contexts.length;
 
 	let val = token.val;
-	if (openQuote) {
+	if (details.openQuote) {
 		val = openVal;
 	}
 
@@ -156,26 +157,33 @@ export function finalLivePass(ctx: ParsingContext, liveCtx: LiveContext): Detail
 
 	}
 	// free context, suggest a context
-	else if (currentContext === false && token.open) {
+	else if (currentContext === false && token.open && !details.openQuote) {
 
 		// see if the avalible contexts match anything the user typed
 		// if so, add them to autocompletion
 		details.autocomplete = Object.keys(filters).filter(s => 
 			s.startsWith(val)
+		).map(s => 
+			s + ":"
 		);
 
 	}
 
-	// build autocompletion string
+	// finalize the autocompletion strings
 	if (details.autocomplete) {
 
 		// filter out suggestions with spaces, if no quotes are used
-		if (!openQuote) {
+		if (!details.openQuote) {
 			details.autocomplete = details.autocomplete.filter(s => !s.includes(" "));
 		}
 
 		// some strings need adjustment. we don't want to suggest, what the user has allready typed
+		// we also want to suggest closing open quotes
 		details.autocomplete = details.autocomplete.map(suggestion => {
+			if (details.openQuote) {
+				suggestion += '"';
+			}
+
 			if (suggestion.startsWith(val)) {
 				// if partial match, remove overlap
 				return suggestion.slice(val.length);
@@ -192,5 +200,3 @@ export function finalLivePass(ctx: ParsingContext, liveCtx: LiveContext): Detail
 	return details;
 
 }
-
-

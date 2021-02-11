@@ -1,17 +1,20 @@
 import type { AbstractFilters, ArrayCheck } from "../types/abstractFormat"
-import { deepCopy } from "../util.js";
+import { stringToRegex } from "../util.js";
 
 
-/** simple json friendly object */
+/** simple aggregation pipeline friendly object */
 interface iDictionary {
-	[key: string]: string | number | null | iDictionary | string[] | number[] | iDictionary[]
+	[key: string]: string | number | null | iDictionary | RegExp | string[] | number[] | iDictionary[] | RegExp[]
 }
 
 interface GeoJsonPoint {
 	type: "Point", coordinates: [number, number]
 }
 
-/** Compiler coctext */
+/**
+ * Compiler context
+ * Passed to internal functions, to simplify parameters and returns.
+ */
 interface Context { 
 	pipeline: object[]
 	queries: object[]
@@ -19,8 +22,14 @@ interface Context {
 }
 
 /**
- * Stages to inject before given fields (referenced by key) are accessed in pipeline.
- * Required when querying fields that might no yet exist (eg. manually referenced fields)
+ * Stages to inject in front of field access, for spcific fields, referenced by key.
+ * 
+ * Required when querying fields that might no yet exist (eg. manually referenced fields).
+ * Each Stage is only injected once.
+ * 
+ * Prefer stage injection, over appending a lookup manually,
+ * as the stages are only injected when needed, and are injected as late as possible,
+ * making the pipeline more preformant on average.
  */
 export interface InjectedStages {
 	[fieldName: string]: iDictionary
@@ -28,11 +37,12 @@ export interface InjectedStages {
 
 
 /**
- * Compiles a filter to a mongoDB aggregation pipeline, which can be further modified, or used directly, to apply the filter.
+ * Compiles a filter to a mongoDB aggregation pipeline, which can be further modified, or used directly, to get the filtered documents.
+ * Throws an error, if compiling failed (eg. bad input).
  * For security concerns, it is not recommended to do this client side
  * @param intermediateForm parsed filter
  * @param injectedStages a object containing custom stages to inject in front of specific fields. Useful for $lookup, $set or $project. Only used fields are injected
- * @param location prefetched location coordinates. Required when using a location filter. Fetch cooridantes with "location.locationName"
+ * @param location prefetched location coordinates. Required when using a location filter. Fetch cooridantes of "location.locationName"
  */
 export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStages?: InjectedStages, location?: GeoJsonPoint ): object[] {
 
@@ -41,11 +51,13 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	let ctx: Context = {
 		pipeline: [],
 		queries: [],
-		injectedStages: deepCopy(injectedStages)
+		injectedStages: injectedStages
 	}
 
 	// Wildcards
-	if (intermediateForm.wildcard.length !== 0) {
+	if (intermediateForm.wildcard.length > 0) {
+
+		assertPrimitiveArray(intermediateForm.wildcard);
 
 		let wildcardString = intermediateForm.wildcard.join(" ");
 
@@ -69,11 +81,13 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Includes
-	if (intermediateForm.include.length !== 0) {
+	if (intermediateForm.include.length > 0) {
 
 		let includes: object[] = [];
 
 		intermediateForm.include.forEach(field => {
+			assertPrimitive(field); 
+
 			injectStage(field, ctx);
 
 			let include: iDictionary = {};
@@ -85,11 +99,13 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Excludes
-	if (intermediateForm.exclude.length !== 0) {
+	if (intermediateForm.exclude.length > 0) {
 
 		let excludes: object[] = [];
 
 		intermediateForm.exclude.forEach(field => {
+			assertPrimitive(field);
+
 			injectStage(field, ctx);
 
 			let exclude: iDictionary = {};
@@ -101,41 +117,45 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Array includes
-	if (intermediateForm.arrayIncludes.length !== 0) {
+	if (intermediateForm.arrayIncludes.length > 0) {
 
 		let matches: object[] = [];
 
 		intermediateForm.arrayIncludes.forEach(arrInclude => {
-			matches.push( makeArraySelector(arrInclude, true, ctx) );
+			let selector = makeArraySelector(arrInclude, true, ctx);
+
+			matches.push( selector );
 		});
 
 		ctx.queries = [...ctx.queries, ...matches];
 	}
 
 	// Array excludes
-	if (intermediateForm.arrayExcludes.length !== 0) {
+	if (intermediateForm.arrayExcludes.length > 0) {
 
 		let matches: object[] = [];
 
 		intermediateForm.arrayExcludes.forEach(arrExclude => {
-			matches.push( makeArraySelector(arrExclude, false, ctx) );
+			let selector = makeArraySelector(arrExclude, false, ctx);
+
+			matches.push( selector );
 		});
 
 		ctx.queries = [...ctx.queries, ...matches];
 	}
 
 	// Comparators
-	if ( Object.keys(intermediateForm.compare).length !== 0) {
+	if ( Object.keys(intermediateForm.compare).length > 0) {
 
 		let matches: object[] = [];
 
 		for (const [field, comparison] of Object.entries(intermediateForm.compare)) {
 			let match: iDictionary = {};
 
-			if (comparison.equalTo) match["$eq"] = comparison.equalTo;
-			if (comparison.largerThan) match["$gt"] = comparison.largerThan;
-			if (comparison.smallerThan) match["$lt"] = comparison.smallerThan;
-			if (comparison.notEqualTo) match["$ne"] = comparison.notEqualTo;
+			match = checkAndAssign(comparison.equalTo, match, ["eq", "$regex"], "$in");
+			match = checkAndAssign(comparison.notEqualTo, match, "$ne", "$nin");
+			match = checkAndAssign(comparison.largerThan, match, "$gt");
+			match = checkAndAssign(comparison.smallerThan, match, "$lt");
 
 			if ( Object.keys(match).length === 0 ) continue;
 
@@ -159,12 +179,14 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		
 		let distance = intermediateForm.location.distance ?? 10;
 
+		assertPrimitive(distance);
+
 		// geoNear query
 		if (!sortStage && ctx.pipeline.length === 0) {
 
 			ctx.pipeline.unshift({
 				$geoNear: {
-					near: deepCopy(location),
+					near: location,
 					distanceField: "distance",
 					maxDistance: distance * 1000
 				}
@@ -178,6 +200,8 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		// geoWithin match
 		else if (intermediateForm.location.field) {
 
+			assertPrimitive(intermediateForm.location.field);
+
 			let radians = distance / 6371;
 
 			insertStagedQueriesIntoPipeline(ctx);
@@ -185,7 +209,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 			let obj: any = {};
 			obj[intermediateForm.location.field] = {
 				$geoWithin: {
-					$centerSphere: [ deepCopy(location.coordinates) , radians]
+					$centerSphere: [ location.coordinates , radians]
 				}
 			}
 
@@ -225,12 +249,12 @@ function insertStagedQueriesIntoPipeline(ctx: Context) {
 	if (ctx.queries.length === 1) {
 		// single query insertion
 		ctx.pipeline.push({
-			$match: deepCopy( ctx.queries[0] )
+			$match: ctx.queries[0]
 		});
 	} else {
 		// insert multiple queries
 		ctx.pipeline.push({
-			$match: { $and: deepCopy( ctx.queries ) }
+			$match: { $and: ctx.queries }
 		});
 	}
 
@@ -255,10 +279,12 @@ function injectStage(field: string, ctx: Context) {
 
 	insertStagedQueriesIntoPipeline(ctx);
 
-	ctx.pipeline.push( deepCopy(stage) );
+	ctx.pipeline.push( stage );
 	
 	// delete injected stage, to avoid double insertion
-	delete ctx.injectedStages[field];
+	let {[field]: omit, ...stages} = ctx.injectedStages;
+
+	ctx.injectedStages = stages;
 
 }
 
@@ -276,15 +302,20 @@ function makeArraySelector(arrCheck: ArrayCheck, include: boolean, ctx: Context)
 	if (arrCheck.values.length === 0) return {};
 	if (arrCheck.fields.length === 0) return {};
 
+	assertPrimitiveArray(arrCheck.values);
+	assertPrimitiveArray(arrCheck.fields);
+
 	let match: iDictionary;
 	
+	let regExpValues = makeStringArrayRegex(arrCheck.values);
+
 	if (include) {
 		match = {
-			$all: arrCheck.values
+			$all: regExpValues
 		}
 	} else {
 		match = {
-			$in: arrCheck.values
+			$in: regExpValues
 		}
 	}
 
@@ -306,5 +337,68 @@ function makeArraySelector(arrCheck: ArrayCheck, include: boolean, ctx: Context)
 		matcher = { $nor: matchArray };
 	}
 
-	return deepCopy(matcher);
+	return matcher;
+}
+
+/** asserts if a value is primtive */
+function assertPrimitive(value: any): void {
+	if ((typeof value === 'object' && typeof value !== null) || typeof value === 'function') {
+		throw "bad input";
+	}
+}
+
+/** aserts if a value is a array of primitives */
+function assertPrimitiveArray(array: any[]): void {
+	if (!Array.isArray(array)) throw "bad input";
+	
+	for (let i = 0; i < array.length; i++) {
+		const element = array[i];
+		assertPrimitive(element);
+	}
+}
+
+/** converts an array of string, to an array of regular expressions */
+function makeStringArrayRegex(arr: string[]): RegExp[] {
+	return arr.map(val => {
+		return stringToRegex(val, "i");
+	});
+}
+
+/**
+ * Assigns a value to a matcher.
+ * Assisngs the value to different keys, depending on wether it is a single value, or an array.
+ * Converts strings to regexp.
+ */
+function checkAndAssign(valOrArr: any[] | any, match: iDictionary, valKey: string | [string, string], arrKey?: string): iDictionary {
+
+	if (valOrArr === undefined) return match;
+
+	if (arrKey !== undefined && Array.isArray(valOrArr)) {
+		let arr: string[] | number[] | RegExp[] = valOrArr;
+
+		assertPrimitiveArray(arr);
+
+		if (arr.length > 0 && typeof arr[0] === "string") {
+			arr = makeStringArrayRegex(arr as string[]);
+		}
+
+		match[arrKey] = arr;
+	} else {
+		assertPrimitive(valOrArr);
+
+		let val: string | number | RegExp = valOrArr;
+
+		if (Array.isArray(valKey)) {
+			if (typeof val === "string") {
+				val = stringToRegex(val, "i");
+				match[valKey[1]] = val;
+			} else {
+				match[valKey[0]] = val;
+			}
+		} else {
+			match[valKey] = val;
+		}
+	}
+
+	return match;
 }

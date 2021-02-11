@@ -1,5 +1,9 @@
 import type { StringDictionary } from "./types/languageDefinition"
 
+/**
+ * changes the keys of a dictrionary object to lower case
+ * @param dict 
+ */
 export function lowerCaseKeys(dict: StringDictionary): StringDictionary {
 
 	let key, keys = Object.keys(dict);
@@ -23,4 +27,14 @@ export function lowerCaseKeys(dict: StringDictionary): StringDictionary {
 export function deepCopy<T>(obj: T): T {
 	if (obj === undefined || obj === null) return obj;
 	return JSON.parse(JSON.stringify( obj ));
+}
+
+/**
+ * Converts a string to a regular expression, with all special RegExp characters escaped
+ * @param string string to convert
+ * @param flags flags to set on RegExp
+ */
+export function stringToRegex(string: string, flags?: string): RegExp {
+	let escapedStr = string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return new RegExp(`^${escapedStr}$`, flags);
 }
