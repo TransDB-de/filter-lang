@@ -10,7 +10,7 @@
   "author": "Laila Los",
   "license": "MIT",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/@transdb-de"
+    "registry": "https://npm.pkg.github.com/"
   },
   "repository": {
     "type": "git",
