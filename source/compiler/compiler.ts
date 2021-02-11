@@ -32,7 +32,7 @@ interface Context {
  * making the pipeline more preformant on average.
  */
 export interface InjectedStages {
-	[fieldName: string]: iDictionary
+	[fieldName: string]: iDictionary[]
 }
 
 
@@ -88,7 +88,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		intermediateForm.include.forEach(field => {
 			assertPrimitive(field); 
 
-			injectStage(field, ctx);
+			injectStages(field, ctx);
 
 			let include: iDictionary = {};
 			include[field] = { $ne: null };
@@ -106,7 +106,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		intermediateForm.exclude.forEach(field => {
 			assertPrimitive(field);
 
-			injectStage(field, ctx);
+			injectStages(field, ctx);
 
 			let exclude: iDictionary = {};
 			exclude[field] = null;
@@ -159,7 +159,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 
 			if ( Object.keys(match).length === 0 ) continue;
 
-			injectStage(field, ctx);
+			injectStages(field, ctx);
 
 			let obj: iDictionary = {};
 			obj[field] = match;
@@ -268,23 +268,23 @@ function insertStagedQueriesIntoPipeline(ctx: Context) {
  * @param field 
  * @param ctx compiler context
  */
-function injectStage(field: string, ctx: Context) {
+function injectStages(field: string, ctx: Context) {
 	// nothing to inject
 	if (!ctx.injectedStages) return;
 
-	let stage = ctx.injectedStages[field];
+	let stages = ctx.injectedStages[field];
 
 	// no injection for this field
-	if (!stage) return;
+	if (!stages) return;
 
 	insertStagedQueriesIntoPipeline(ctx);
 
-	ctx.pipeline.push( stage );
+	ctx.pipeline = [ ...ctx.pipeline, ...stages ];
 	
 	// delete injected stage, to avoid double insertion
-	let {[field]: omit, ...stages} = ctx.injectedStages;
+	let {[field]: omit, ...injStages} = ctx.injectedStages;
 
-	ctx.injectedStages = stages;
+	ctx.injectedStages = injStages;
 
 }
 
@@ -322,7 +322,7 @@ function makeArraySelector(arrCheck: ArrayCheck, include: boolean, ctx: Context)
 	let matchArray: iDictionary[] = [];
 
 	arrCheck.fields.forEach(field => {
-		injectStage(field, ctx);
+		injectStages(field, ctx);
 
 		let subMatch: iDictionary = {};
 
