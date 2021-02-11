@@ -95,7 +95,7 @@ This will compile to the following MongoDB aggregation:
 ```json
 [
   { "$match":
-    { "info.color": { "$eq": /^red$/i } } 
+    { "info.color": { "$regex": /^red$/i } } 
   },
   { "$sort": { "_id": -1 } }
 ]
