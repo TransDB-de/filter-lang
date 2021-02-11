@@ -42,9 +42,10 @@ export interface InjectedStages {
  * For security concerns, it is not recommended to do this client side
  * @param intermediateForm parsed filter
  * @param injectedStages a object containing custom stages to inject in front of specific fields. Useful for $lookup, $set or $project. Only used fields are injected
+ * @param alwaysInject string array containing keys of injected stages to always inject. If no filter required the injected stage, it will be injected at the very end
  * @param location prefetched location coordinates. Required when using a location filter. Fetch cooridantes of "location.locationName"
  */
-export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStages?: InjectedStages, location?: GeoJsonPoint ): object[] {
+export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStages?: InjectedStages, alwaysInject?: string[], location?: GeoJsonPoint ): object[] {
 
 	let sortStage: object | null = null;
 
@@ -230,6 +231,12 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	ctx.pipeline.push(sortStage);
+
+	if (alwaysInject) {
+		alwaysInject.forEach(key => {
+			injectStages(key, ctx);
+		});
+	}
 
 	return ctx.pipeline;
 }
