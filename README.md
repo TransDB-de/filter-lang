@@ -27,7 +27,7 @@ Then, install the pacakge with:
 
 You can now use it in your code with:
 
-`import * as filter-lang from "filter-lang"`
+`import * as filterLang from "filter-lang"`
 
 ## Getting Started
 
