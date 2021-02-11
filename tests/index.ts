@@ -142,7 +142,7 @@ command = 'hat:"Mindestalter",'
 
 command = "straße: astr, bstr, cstr"
 
-command = "vorname: Bob bietet: guteLaune"
+command = ""
 
 console.log(FilterLang.Lexer.tokenize(command));
 

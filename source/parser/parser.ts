@@ -151,7 +151,10 @@ function parseContextFree(ctx: ParsingContext): ParsingContext {
 	// token which is not a filter, and not in context must be a wildcard
 	if (token.type !== TokenType.Filter) {
 
-		aFilter.wildcard.push(token.val);
+		if (token.val !== "") {
+			aFilter.wildcard.push(token.val);
+		}
+
 		return { ...ctx, aFilter };
 
 	} else {
@@ -165,12 +168,14 @@ function parseContextFree(ctx: ParsingContext): ParsingContext {
 			currentContext = filters[filterName];
 			return { ...ctx, aFilter, currentContext };
 
-		} else {
+		} else if (token.val !== "") {
 
 			// if no filter was found, set to wildcard, just in case
 			aFilter.wildcard.push(token.val);
 			return { ...ctx, aFilter };
 
+		} else {
+			return { ...ctx };
 		}
 
 	}
@@ -425,10 +430,10 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 		} else
 		if (type.startsWith("wildcard")) {
 
-			if (type === "wildcard") {
+			if (type === "wildcard" && val !== "") {
 				aFilter.wildcard.push(val);
 			} else
-			if (type === "wildcard-not") {
+			if (type === "wildcard-not" && val !== "") {
 				aFilter.wildcard.push("-" + val);
 			}
 
