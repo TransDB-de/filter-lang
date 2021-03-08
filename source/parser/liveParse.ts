@@ -31,17 +31,24 @@ export interface Details {
 export interface LiveContext {
 	/** context of the last parsing cycle */
 	lastContext: false | LanguageFilter
+
 	/** details object being filled by live parse */
 	details: Details
+
 	/** where the currently open context started in the input string */
 	contextStart: number
+
 	/** name of the filter currently in context */
 	contextName: string
+
 	/** if the input has an unclosed quote, collects all token values, for better autocompletion */
 	openVal: string
 }
 
-/** @internal */
+/**
+ * @internal
+ * run before every parsing cycle
+ */
 export function beforeParse(ctx: ParsingContext, liveCtx: LiveContext): LiveContext {
 
 	let { details, openVal } = liveCtx;
@@ -57,7 +64,10 @@ export function beforeParse(ctx: ParsingContext, liveCtx: LiveContext): LiveCont
 	return { ...liveCtx, details, openVal };
 }
 
-/** @internal */
+/**
+ * @internal
+ * run after every parsing cycle
+ */
 export function afterParse(ctx: ParsingContext, liveCtx: LiveContext): LiveContext {
 
 	let { lastContext, contextName, contextStart, details } = liveCtx;
@@ -172,18 +182,23 @@ export function finalLivePass(ctx: ParsingContext, liveCtx: LiveContext): Detail
 	// finalize the autocompletion strings
 	if (details.autocomplete) {
 
-		// filter out suggestions with spaces, if no quotes are used
+		// filter out suggestions with spaces, if the user has no unclosed quotes
 		if (!details.openQuote) {
 			details.autocomplete = details.autocomplete.filter(s => !s.includes(" "));
 		}
 
-		// some strings need adjustment. we don't want to suggest, what the user has allready typed
+		// some strings need adjustment. 
+
+		// we don't want to suggest, what the user has allready typed
 		// we also want to suggest closing open quotes
 		details.autocomplete = details.autocomplete.map(suggestion => {
+
+			// If there is an open quote, append a closing quote to every suggestion
 			if (details.openQuote) {
 				suggestion += '"';
 			}
 
+			// The user allready typed out part of the suggestion
 			if (suggestion.startsWith(val)) {
 				// if partial match, remove overlap
 				return suggestion.slice(val.length);

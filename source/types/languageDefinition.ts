@@ -37,6 +37,8 @@ export interface FilterDefinition {
 	 * 
 	 * @value "text" : case-insensitive text comparison
 	 * @value "include" : field null check
+	 * @value "boolean" : simple boolean comparison. field must be true to match
+	 * @value "boolean-not" : inverted boolean comparison. field must be false to match
 	 * @value "exclude" : opposite of include
 	 * @value "array-contains" : array search. all values must be found in array, for match to occur
 	 * @value "date-compare" : attempts to date-convert provided value.
@@ -50,6 +52,8 @@ export interface FilterDefinition {
 		| "text-not"
 		| "include"
 		| "include-not"
+		| "boolean"
+		| "boolean-not"
 		| "array-contains"
 		| "array-contains-not"
 		| "date-compare"
@@ -85,7 +89,7 @@ export interface FilterDefinition {
 	suffixes?: [string, string, string]
 
 	/**
-	 * Flat object with language names to data names.
+	 * Flat object with language names to data names mapping.
 	 * 
 	 * Can be used to convert keys, or values, depending on the type of filter.
 	 * 

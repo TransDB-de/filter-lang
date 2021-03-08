@@ -34,7 +34,7 @@ const langDef: FilterLang.LanguageDefinition = [
 	{
 		name: "ist",
 		negationSuffix: "nicht",
-		type: "include",
+		type: "boolean",
 		mappings: {
 			"Freigeschaltet": "approved"
 		}
@@ -117,10 +117,6 @@ const langDef: FilterLang.LanguageDefinition = [
 
 let command;
 
-command = "uwu ist:freigeschaltet hat:freizeitangebote freigeschaltet-am: 03.1.22";
-
-
-
 command = "uwu ist:freigeschaltet ist:gruppe hat:mindestalter hat-nicht:thema";
 
 
@@ -143,6 +139,8 @@ command = 'hat:"Mindestalter",'
 command = "straße: astr, bstr, cstr"
 
 command = ""
+
+command = "uwu ist:freigeschaltet hat:freizeitangebote freigeschaltet-am: 03.1.22";
 
 console.log(FilterLang.Lexer.tokenize(command));
 

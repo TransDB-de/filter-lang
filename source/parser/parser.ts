@@ -1,5 +1,5 @@
 import type { LanguageFilter, LanguageFilterDictionary } from "../types/internal"
-import type { AbstractFilters, ArrayCheck } from "../types/abstractFormat"
+import type { AbstractFilters, ArrayCheck, Comparison } from "../types/abstractFormat"
 import type { StringDictionary } from "../types/languageDefinition"
 
 import { Token, tokenize, TokenType } from "./lexer.js"
@@ -61,6 +61,8 @@ export function parseTokenized(tokens: Token[], filters: LanguageFilterDictionar
 			wildcard: [],
 			include: [],
 			exclude: [],
+			boolTrue: [],
+			boolFalse: [],
 			arrayIncludes: [],
 			arrayExcludes: [],
 			compare: {}
@@ -110,7 +112,7 @@ export function parseTokenized(tokens: Token[], filters: LanguageFilterDictionar
 	return [ deepCopy(ctx.aFilter), details ];
 }
 
-
+/** Parses a date string to a timestamp, assuming some form of d m y format */
 function parseDateStringToTimestamp(date: string): number | null {
 	date = date.replace(/-|\/|\\|\.|_|,/g, " ");
 	let match = date.match(/[0-9]{1,4}/g);
@@ -143,6 +145,7 @@ function parseDateStringToTimestamp(date: string): number | null {
 	return Date.parse(`${y}-${m.slice(-2)}-${d.slice(-2)}`);
 }
 
+/** with no currentContext provided, search for one, or parse values as wildcards */
 function parseContextFree(ctx: ParsingContext): ParsingContext {
 
 	let { aFilter, currentContext } = ctx;
@@ -152,7 +155,7 @@ function parseContextFree(ctx: ParsingContext): ParsingContext {
 	if (token.type !== TokenType.Filter) {
 
 		if (token.val !== "") {
-			aFilter.wildcard.push(token.val);
+			aFilter.wildcard!.push(token.val);
 		}
 
 		return { ...ctx, aFilter };
@@ -171,7 +174,7 @@ function parseContextFree(ctx: ParsingContext): ParsingContext {
 		} else if (token.val !== "") {
 
 			// if no filter was found, set to wildcard, just in case
-			aFilter.wildcard.push(token.val);
+			aFilter.wildcard!.push(token.val);
 			return { ...ctx, aFilter };
 
 		} else {
@@ -182,17 +185,20 @@ function parseContextFree(ctx: ParsingContext): ParsingContext {
 
 }
 
+/** Check the provided map, if the given value should be converted */
 function mapValueIfMappable(value: string, map: StringDictionary): string | null {
 	if (Object.keys(map).length === 0) return value;
 	if (!map[value]) return null;
 	return map[value];
 }
 
+/** Treat the values to parse as values belonging to the current context, and check if the context needs to be kept, or cleared */
 function parseInContext(ctx: ParsingContext): ParsingContext {
 
 	let { currentContext } = ctx;
 	const { token, filters } = ctx;
 
+	// lexer marked this token as a filter:
 	// potential context switch
 	if (token.type === TokenType.Filter) {
 					
@@ -201,7 +207,7 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 		// valid filter?
 		if (filters[filterName]) {
 
-			// context set to specific filter
+			// currentContext set to specific filter
 			currentContext = filters[filterName];
 			return { ...ctx, currentContext };
 
@@ -211,24 +217,29 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 
 	let { aFilter } = ctx;
 
-	// context not switched: parse tokens as values
-	// loop types stored in current context
+	// context was not switched: parse tokens as values
+	// loop types stored in current context, to find the correct type to apply
 	for (const [type, content] of Object.entries(currentContext)) {
 
+		// if this type has no content, we can safely skip it
 		if (!content) continue;
 
 		let val = mapValueIfMappable(token.val, content.mappings);
 
 		// map was provided, but value did not match
-		// continue will try to match alias, if there are any
+		// next loop will try to match alias, if there is one
 		if (val === null) continue;
+
+		// ===== Context Parsing =====
+
+		// ----- Includes -----
 
 		if (type.startsWith("include")) {
 
 			if (type.endsWith("not")) {
-				aFilter.exclude.push(val);
+				aFilter.exclude!.push(val);
 			} else {
-				aFilter.include.push(val);
+				aFilter.include!.push(val);
 			}
 
 			// if there is no comma seperation, exit context
@@ -236,6 +247,9 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			return {...ctx, aFilter, currentContext };
 
 		} else
+
+		// ----- Text Match -----
+
 		if (type.startsWith("text")) {
 
 			let comparisonKey: "equalTo" | "notEqualTo" = "equalTo";
@@ -246,9 +260,9 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 
 			content.fields.forEach((field: string) => {
 
-				if (!aFilter.compare[field]) aFilter.compare[field] = {};
+				if (!aFilter.compare![field]) aFilter.compare![field] = {};
 
-				let cField = aFilter.compare[field][comparisonKey] as string | string[] | undefined;
+				let cField = aFilter.compare![field][comparisonKey] as string | string[] | undefined;
 
 				if (cField === undefined) {
 					cField = val as string;
@@ -262,7 +276,7 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 
 				}
 
-				aFilter.compare[field][comparisonKey] = cField;
+				aFilter.compare![field][comparisonKey] = cField;
 
 			});
 
@@ -271,11 +285,14 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			return { ...ctx, aFilter, currentContext };
 
 		} else
+
+		// ----- Numerical Comparison -----
+
 		if (type.startsWith("number")) {
 
 			let numberVal = parseFloat(val);
 
-			let comparisonKey: keyof AbstractFilters['compare'][string] = "equalTo";
+			let comparisonKey: keyof Comparison = "equalTo";
 
 			if (type.endsWith("not")) {
 				comparisonKey = "notEqualTo";
@@ -290,11 +307,11 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			content.fields.forEach((field: string) => {
 
 				// create field if none exists
-				if (!aFilter.compare[field]) {
-					aFilter.compare[field] = {};
+				if (!aFilter.compare![field]) {
+					aFilter.compare![field] = {};
 				}
 
-				let cField = aFilter.compare[field][comparisonKey] as number | number[] | undefined;
+				let cField = aFilter.compare![field][comparisonKey] as number | number[] | undefined;
 
 				if ((comparisonKey === "equalTo" || comparisonKey === "notEqualTo") && cField !== undefined) {
 
@@ -304,9 +321,9 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 
 					cField.push(numberVal);
 					
-					aFilter.compare[field][comparisonKey] = cField;
+					aFilter.compare![field][comparisonKey] = cField;
 				} else {
-					aFilter.compare[field][comparisonKey] = numberVal;
+					aFilter.compare![field][comparisonKey] = numberVal;
 				}
 
 			});
@@ -315,7 +332,10 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			if (!token.commaSeperated) currentContext = false;
 			return { ...ctx, aFilter, currentContext };
 
-		}
+		} else
+
+		// ----- Array Inclusion -----
+
 		if (type.startsWith("array")) {
 
 			let key: keyof AbstractFilters = "arrayIncludes";
@@ -325,13 +345,13 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			}
 
 			// check for uniqueness
-			let entry = aFilter[key].find((check: ArrayCheck) => 
+			let entry = aFilter[key]!.find((check: ArrayCheck) => 
 				JSON.stringify(check.fields) === JSON.stringify(content.fields)
 			)
 
 			// append values or push values
 			if (!entry) {
-				aFilter[key].push({
+				aFilter[key]!.push({
 					fields: content.fields,
 					values: [val]
 				});
@@ -344,6 +364,9 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			return { ...ctx, aFilter, currentContext };
 
 		} else
+
+		// ----- Date Comparison -----
+
 		if (type.startsWith("date")) {
 
 			// replace symbols with spaces
@@ -356,18 +379,18 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 				content.fields.forEach((field: string) => {
 
 					// if field does not yet exist in abstract filter, create it
-					if (!aFilter.compare[field]) aFilter.compare[field] = {};
+					if (!aFilter.compare![field]) aFilter.compare![field] = {};
 
 					if (type.endsWith("-before")) {
-						aFilter.compare[field].smallerThan = timestamp as number;
+						aFilter.compare![field].smallerThan = timestamp as number;
 					} else
 					if (type.endsWith("-after")) {
-						aFilter.compare[field].largerThan = timestamp as number;
+						aFilter.compare![field].largerThan = timestamp as number;
 					}
 					else {
 						// when searching for a specific day, check if timestamp is between the start and the end of the day
-						aFilter.compare[field].largerThan = timestamp as number;
-						aFilter.compare[field].smallerThan = timestamp as number + 86400000; // date + 24h
+						aFilter.compare![field].largerThan = timestamp as number;
+						aFilter.compare![field].smallerThan = timestamp as number + 86400000; // date + 24h
 					}
 
 				});
@@ -378,6 +401,9 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			return { ...ctx, aFilter, currentContext };
 
 		} else
+
+		// ----- Location Perimiter Search -----
+
 		if (type.startsWith("location")) {
 
 			let { tempLocation, iteration } = ctx;
@@ -428,13 +454,32 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 			return { ...ctx, aFilter, currentContext, tempLocation, iteration };
 
 		} else
+
+		// ----- Boolean Comparison -----
+
+		if (type.startsWith("boolean")) {
+
+			if (type.endsWith("not")) {
+				aFilter.boolFalse!.push(val);
+			} else {
+				aFilter.boolTrue!.push(val);
+			}
+
+			// if there is no comma seperation, exit context
+			if (!token.commaSeperated) currentContext = false;
+			return {...ctx, aFilter, currentContext };
+
+		} else
+
+		// ----- Explicit Wildcard -----
+
 		if (type.startsWith("wildcard")) {
 
 			if (type === "wildcard" && val !== "") {
-				aFilter.wildcard.push(val);
+				aFilter.wildcard!.push(val);
 			} else
 			if (type === "wildcard-not" && val !== "") {
-				aFilter.wildcard.push("-" + val);
+				aFilter.wildcard!.push("-" + val);
 			}
 
 			// if there is no comma seperation, exit context
@@ -445,10 +490,10 @@ function parseInContext(ctx: ParsingContext): ParsingContext {
 
 	}
 
-	// all types looped, no match found
+	// all types looped, no match found, as function did not return
 	// likely a typo.
 	// add token as wild-card just in case
-	aFilter.wildcard.push(token.val);
+	aFilter.wildcard!.push(token.val);
 
 	// if there is no comma seperation, exit context
 	if (!token.commaSeperated) currentContext = false;

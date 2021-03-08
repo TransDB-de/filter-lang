@@ -68,17 +68,22 @@ function makeLangFilter(filterDef: FilterDefinition): LanguageFilterDictionary {
 
 		let mappings: StringDictionary;
 
+		// convert mappings to lower case, if mapping were provided
 		if (filterDef.mappings) {
 			mappings = lowerCaseKeys(filterDef.mappings);
 		} else {
 			mappings = {}
 		}
 
+		// construct a filter, with a subfield of the filters type
 		newFilter[filterDef.type] = {
+			// the affected fields
+			// converts single field declarations to an array for simplicity
 			fields: filterDef.field ? [filterDef.field] : filterDef.fields ?? [],
 			mappings
 		}
 
+		// date comparisons pose special cases, by adding multipe filters at once
 		if (filterDef.type === "date-compare" && filterDef.suffixes) {
 
 			if (filterDef.suffixes.length !== 3) throw "wrong number of date-compare suffixes";
@@ -98,8 +103,10 @@ function makeLangFilter(filterDef: FilterDefinition): LanguageFilterDictionary {
 
 		} else {
 			
+			// assign filter
 			newFilters[filterDef.name.toLowerCase()] = newFilter;
 
+			// add negations
 			if (filterDef.negationSuffix) {
 
 				if (filterDef.type === "location") throw "location filters can't be negated";

@@ -4,7 +4,7 @@ import { stringToRegex } from "../util.js";
 
 /** simple aggregation pipeline friendly object */
 interface iDictionary {
-	[key: string]: string | number | null | iDictionary | RegExp | string[] | number[] | iDictionary[] | RegExp[]
+	[key: string]: string | number | null | iDictionary | RegExp | boolean | string[] | number[] | iDictionary[] | RegExp[] | boolean []
 }
 
 interface GeoJsonPoint {
@@ -12,6 +12,7 @@ interface GeoJsonPoint {
 }
 
 /**
+ * @internal
  * Compiler context
  * Passed to internal functions, to simplify parameters and returns.
  */
@@ -40,6 +41,7 @@ export interface InjectedStages {
  * Compiles a filter to a mongoDB aggregation pipeline, which can be further modified, or used directly, to get the filtered documents.
  * Throws an error, if compiling failed (eg. bad input).
  * For security concerns, it is not recommended to do this client side
+ * 
  * @param intermediateForm parsed filter
  * @param injectedStages a object containing custom stages to inject in front of specific fields. Useful for $lookup, $set or $project. Only used fields are injected
  * @param alwaysInject string array containing keys of injected stages to always inject. If no filter required the injected stage, it will be injected at the very end
@@ -56,7 +58,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Wildcards
-	if (intermediateForm.wildcard.length > 0) {
+	if (intermediateForm.wildcard && intermediateForm.wildcard.length > 0) {
 
 		assertPrimitiveArray(intermediateForm.wildcard);
 
@@ -82,7 +84,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Includes
-	if (intermediateForm.include.length > 0) {
+	if (intermediateForm.include && intermediateForm.include.length > 0) {
 
 		let includes: object[] = [];
 
@@ -100,7 +102,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Excludes
-	if (intermediateForm.exclude.length > 0) {
+	if (intermediateForm.exclude && intermediateForm.exclude.length > 0) {
 
 		let excludes: object[] = [];
 
@@ -117,8 +119,44 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		ctx.queries = [...ctx.queries, ...excludes];
 	}
 
+	// Boolean True
+	if (intermediateForm.boolTrue && intermediateForm.boolTrue.length > 0) {
+
+		let boolTrues: object[] = [];
+
+		intermediateForm.boolTrue.forEach(field => {
+			assertPrimitive(field);
+
+			injectStages(field, ctx);
+
+			let bTrue: iDictionary = {};
+			bTrue[field] = true;
+			boolTrues.push(bTrue);
+		});
+
+		ctx.queries = [...ctx.queries, ...boolTrues];
+	}
+
+	// Boolean False
+	if (intermediateForm.boolFalse && intermediateForm.boolFalse.length > 0) {
+
+		let boolFalses: object[] = [];
+
+		intermediateForm.boolFalse.forEach(field => {
+			assertPrimitive(field);
+
+			injectStages(field, ctx);
+
+			let bFalse: iDictionary = {};
+			bFalse[field] = false;
+			boolFalses.push(bFalse);
+		});
+
+		ctx.queries = [...ctx.queries, ...boolFalses];
+	}
+
 	// Array includes
-	if (intermediateForm.arrayIncludes.length > 0) {
+	if (intermediateForm.arrayIncludes && intermediateForm.arrayIncludes.length > 0) {
 
 		let matches: object[] = [];
 
@@ -132,7 +170,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Array excludes
-	if (intermediateForm.arrayExcludes.length > 0) {
+	if (intermediateForm.arrayExcludes && intermediateForm.arrayExcludes.length > 0) {
 
 		let matches: object[] = [];
 
@@ -146,7 +184,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 	}
 
 	// Comparators
-	if ( Object.keys(intermediateForm.compare).length > 0) {
+	if ( intermediateForm.compare && Object.keys(intermediateForm.compare).length > 0) {
 
 		let matches: object[] = [];
 
@@ -224,6 +262,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		insertStagedQueriesIntoPipeline(ctx);
 	}
 
+	// add default sort stage
 	if (!sortStage) {
 		sortStage = {
 			$sort: { _id: -1 }
