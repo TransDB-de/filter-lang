@@ -34,6 +34,8 @@ export interface FilterDefinition {
      *
      * @value "text" : case-insensitive text comparison
      * @value "include" : field null check
+     * @value "boolean" : simple boolean comparison. field must be true to match
+     * @value "boolean-not" : inverted boolean comparison. field must be false to match
      * @value "exclude" : opposite of include
      * @value "array-contains" : array search. all values must be found in array, for match to occur
      * @value "date-compare" : attempts to date-convert provided value.
@@ -43,7 +45,7 @@ export interface FilterDefinition {
      * @value "wildcard" : free text search. only useful if default wildcard behaviour is turned of
      * @value "wildcard-not" : boolean NOT for wildcards
      */
-    type: "text" | "text-not" | "include" | "include-not" | "array-contains" | "array-contains-not" | "date-compare" | "date-compare-before" | "date-compare-after" | "number" | "number-not" | "number-larger" | "number-smaller" | "location" | "wildcard" | "wildcard-not";
+    type: "text" | "text-not" | "include" | "include-not" | "boolean" | "boolean-not" | "array-contains" | "array-contains-not" | "date-compare" | "date-compare-before" | "date-compare-after" | "number" | "number-not" | "number-larger" | "number-smaller" | "location" | "wildcard" | "wildcard-not";
     /** single affected data field. alias to { fields: [string] } */
     field?: string;
     /** multiple affected data fields */
@@ -63,7 +65,7 @@ export interface FilterDefinition {
      */
     suffixes?: [string, string, string];
     /**
-     * Flat object with language names to data names.
+     * Flat object with language names to data names mapping.
      *
      * Can be used to convert keys, or values, depending on the type of filter.
      *

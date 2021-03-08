@@ -25,17 +25,21 @@ export interface ArrayCheck {
  */
 export interface AbstractFilters {
     /** wildcard text search. requires a text index */
-    wildcard: string[];
+    wildcard?: string[];
     /** null-checks. document fields must be present and non-null */
-    include: string[];
+    include?: string[];
     /** inverse null-check. document fields must be absent or null */
-    exclude: string[];
+    exclude?: string[];
+    /** boolean truth check */
+    boolTrue?: string[];
+    /** boolean false check */
+    boolFalse?: string[];
     /** test for values in array (and check) */
-    arrayIncludes: ArrayCheck[];
+    arrayIncludes?: ArrayCheck[];
     /** test for values in array. (not - or check) */
-    arrayExcludes: ArrayCheck[];
+    arrayExcludes?: ArrayCheck[];
     /** compare strings or number */
-    compare: {
+    compare?: {
         [key: string]: Comparison;
     };
     /**

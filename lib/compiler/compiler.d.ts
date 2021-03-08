@@ -1,7 +1,7 @@
 import type { AbstractFilters } from "../types/abstractFormat";
 /** simple aggregation pipeline friendly object */
 interface iDictionary {
-    [key: string]: string | number | null | iDictionary | RegExp | string[] | number[] | iDictionary[] | RegExp[];
+    [key: string]: string | number | null | iDictionary | RegExp | boolean | string[] | number[] | iDictionary[] | RegExp[] | boolean[];
 }
 interface GeoJsonPoint {
     type: "Point";
@@ -24,6 +24,7 @@ export interface InjectedStages {
  * Compiles a filter to a mongoDB aggregation pipeline, which can be further modified, or used directly, to get the filtered documents.
  * Throws an error, if compiling failed (eg. bad input).
  * For security concerns, it is not recommended to do this client side
+ *
  * @param intermediateForm parsed filter
  * @param injectedStages a object containing custom stages to inject in front of specific fields. Useful for $lookup, $set or $project. Only used fields are injected
  * @param alwaysInject string array containing keys of injected stages to always inject. If no filter required the injected stage, it will be injected at the very end
