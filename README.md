@@ -2,6 +2,16 @@
 
 FilterLang is a domain specific language that allows users to safely and effectivley filter a database through the front-end.
 
+## Installing
+
+Install the package with:
+
+`npm install @transdb-de/filter-lang`
+
+You can now use it in your code with:
+
+`import * as filterLang from "@transdb-de/filter-lang"`
+
 ## About
 
 FilterLang lets you define your own set of filters a user can input. It is meant to be used for administrative purposes, and front-end database managment.
