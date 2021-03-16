@@ -6,7 +6,7 @@ FilterLang is a domain specific language that allows users to safely and effecti
 
 Install the package with:
 
-`npm install @transdb-de/filter-lang`
+`npm install transdb-de/filter-lang`
 
 You can now use it in your code with:
 
