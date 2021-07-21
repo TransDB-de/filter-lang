@@ -191,7 +191,7 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		for (const [field, comparison] of Object.entries(intermediateForm.compare)) {
 			let match: iDictionary = {};
 
-			match = checkAndAssign(comparison.equalTo, match, ["eq", "$regex"], "$in");
+			match = checkAndAssign(comparison.equalTo, match, ["$eq", "$regex"], "$in");
 			match = checkAndAssign(comparison.notEqualTo, match, "$ne", "$nin");
 			match = checkAndAssign(comparison.largerThan, match, "$gt");
 			match = checkAndAssign(comparison.smallerThan, match, "$lt");
