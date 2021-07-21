@@ -1,6 +1,6 @@
 {
   "name": "@transdb-de/filter-lang",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "Domain specific front-end filter language",
   "main": "./lib/index.js",
   "scripts": {
