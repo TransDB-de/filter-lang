@@ -1,10 +1,10 @@
 {
   "name": "@transdb-de/filter-lang",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Domain specific front-end filter language",
   "main": "./lib/index.js",
   "scripts": {
-    "test": "node ./js/tests",
+    "test": "node ./js/tests/car.js",
     "build": "tsc --project tsconfig.build.json"
   },
   "author": "Laila Los",

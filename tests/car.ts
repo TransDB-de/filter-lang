@@ -12,10 +12,10 @@ const language = new FilterLang.Language(langDef);
 
 const input = "color: red";
 
-let intermediate = language.parse(input);
+let intermediateForm = language.parse(input);
 
 console.log(
 	JSON.stringify(
-		FilterLang.Compiler.compileToMongoDB(intermediate)
+		FilterLang.Compiler.compileToMongoDB(intermediateForm)
 	)
 )

@@ -38,6 +38,26 @@ export interface InjectedStages {
 
 
 /**
+ * Replace the value of a field defined by the key, with the return value of a function.
+ * 
+ * Usefull for transforming strings into mongoDB id objects.
+ * Only works for text type filters.
+ */
+export interface Replacer {
+	[fieldName: string]: (value: string) => any
+}
+
+
+interface NamedParams {
+	intermediateForm: AbstractFilters,
+	injectedStages?: InjectedStages,
+	alwaysInject?: string[],
+	location?: GeoJsonPoint,
+	replacer?: Replacer
+}
+
+
+/**
  * Compiles a filter to a mongoDB aggregation pipeline, which can be further modified, or used directly, to get the filtered documents.
  * Throws an error, if compiling failed (eg. bad input).
  * For security concerns, it is not recommended to do this client side
@@ -46,8 +66,29 @@ export interface InjectedStages {
  * @param injectedStages a object containing custom stages to inject in front of specific fields. Useful for $lookup, $set or $project. Only used fields are injected
  * @param alwaysInject string array containing keys of injected stages to always inject. If no filter required the injected stage, it will be injected at the very end
  * @param location prefetched location coordinates. Required when using a location filter. Fetch cooridantes of "location.locationName"
+ * @param fieldReplacer replace the filter value of a field with the return value of a function
  */
-export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStages?: InjectedStages, alwaysInject?: string[], location?: GeoJsonPoint ): object[] {
+export function compileToMongoDB(params: {
+	intermediateForm: AbstractFilters,
+	injectedStages?: InjectedStages,
+	alwaysInject?: string[],
+	location?: GeoJsonPoint,
+	replacer?: Replacer
+}): object[]
+export function compileToMongoDB(intermediateForm : AbstractFilters, injectedStages?: InjectedStages, alwaysInject?: string[], location?: GeoJsonPoint, replacer?: Replacer ): object[]
+export function compileToMongoDB(formOrParams : AbstractFilters | NamedParams, injectedStages?: InjectedStages, alwaysInject?: string[], location?: GeoJsonPoint, replacer?: Replacer ): object[] {
+
+	let intermediateForm: AbstractFilters;
+
+	if ('intermediateForm' in formOrParams) {
+		intermediateForm = formOrParams.intermediateForm;
+		injectedStages = formOrParams.injectedStages;
+		alwaysInject = formOrParams.alwaysInject;
+		location = formOrParams.location;
+		replacer = formOrParams.replacer;
+	} else {
+		intermediateForm = formOrParams;
+	}
 
 	let sortStage: object | null = null;
 
@@ -191,10 +232,14 @@ export function compileToMongoDB(intermediateForm: AbstractFilters, injectedStag
 		for (const [field, comparison] of Object.entries(intermediateForm.compare)) {
 			let match: iDictionary = {};
 
-			match = checkAndAssign(comparison.equalTo, match, ["$eq", "$regex"], "$in");
-			match = checkAndAssign(comparison.notEqualTo, match, "$ne", "$nin");
-			match = checkAndAssign(comparison.largerThan, match, "$gt");
-			match = checkAndAssign(comparison.smallerThan, match, "$lt");
+			if (replacer && comparison.equalTo && typeof comparison.equalTo === 'string' && field in replacer) {
+				match = replacer[field](comparison.equalTo);
+			} else {
+				match = checkAndAssign(comparison.equalTo, match, ["$eq", "$regex"], "$in");
+				match = checkAndAssign(comparison.notEqualTo, match, "$ne", "$nin");
+				match = checkAndAssign(comparison.largerThan, match, "$gt");
+				match = checkAndAssign(comparison.smallerThan, match, "$lt");
+			}
 
 			if ( Object.keys(match).length === 0 ) continue;
 
