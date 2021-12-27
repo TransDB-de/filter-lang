@@ -226,34 +226,36 @@ export function compileToMongoDB(formOrParams : AbstractFilters | NamedParams, i
 
 	// Comparators
 	if ( intermediateForm.compare && Object.keys(intermediateForm.compare).length > 0) {
-
+		
 		let matches: object[] = [];
-
+		
 		for (const [field, comparison] of Object.entries(intermediateForm.compare)) {
 			let match: iDictionary = {};
-
+			
 			if (replacer && comparison.equalTo && typeof comparison.equalTo === 'string' && field in replacer) {
 				match = replacer[field](comparison.equalTo);
+				
+				if ( match === undefined ) continue
 			} else {
 				match = checkAndAssign(comparison.equalTo, match, ["$eq", "$regex"], "$in");
 				match = checkAndAssign(comparison.notEqualTo, match, "$ne", "$nin");
 				match = checkAndAssign(comparison.largerThan, match, "$gt");
 				match = checkAndAssign(comparison.smallerThan, match, "$lt");
+				
+				if ( Object.keys(match).length === 0 ) continue;
 			}
-
-			if ( Object.keys(match).length === 0 ) continue;
-
+			
 			injectStages(field, ctx);
-
+			
 			let obj: iDictionary = {};
 			obj[field] = match;
-
+			
 			matches.push(obj);
-
+			
 		}
-
+		
 		ctx.queries = [...ctx.queries, ...matches];
-
+		
 	}
 
 	// Location

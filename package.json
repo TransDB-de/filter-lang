@@ -17,7 +17,9 @@
     "url": "git+https://github.com/transdb-de/filter-lang.git"
   },
   "devDependencies": {
-    "@types/node": "^14.14.22"
+    "@types/node": "^14.18.3"
   },
-  "files": ["lib/**/*"]
+  "files": [
+    "lib/**/*"
+  ]
 }
